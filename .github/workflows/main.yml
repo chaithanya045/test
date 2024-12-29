@@ -1,0 +1,64 @@
+name: 22.Create/Delete Banner (QA/Dev)
+
+on:
+  # push:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation to perform (create/delete)'
+        required: true
+        type: choice
+        default: create
+        options:
+          - create
+          - delete
+      tenant_ids:
+        description: 'Comma separated tenant IDs (e.g., JiraKey1,JiraKey2)'
+        required: true
+        type: string
+        default: 872aa0b9-0a27-3a55-8a0a-834b8a1455fb,a4bd61e6-903d-3939-98de-ce7a52121ff1
+      scheduled_date:
+        description: "Scheduled date for create action in YYYY-MM-DD (eg 2024-12-27)"
+        required: true
+        type: string
+        default: '2024-12-27'
+      outage_time:
+        description: 'Outage time in hours (e.g 15.9)'
+        required: true
+        type: string
+        default: '15.9'
+      api_base_url:
+        description : "Base API URL"
+        required : true
+        type : string
+        default: https://prod-play.zephyr4jiracloud.com
+
+jobs:
+  create-delete-banner:
+    runs-on: jcma
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/test'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set Inputs for Workflow Dispatch
+        id: set-inputs
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.ref }}" == "refs/heads/test" ]]; then
+            echo "Using workflow_dispatch inputs"
+            echo "operation=${{ github.event.inputs.operation }}" >> $GITHUB_ENV
+            echo "tenant_ids=${{ github.event.inputs.tenant_ids }}" >> $GITHUB_ENV
+            echo "scheduled_date=${{ github.event.inputs.scheduled_date }}" >> $GITHUB_ENV
+            echo "outage_time=${{ github.event.inputs.outage_time }}" >> $GITHUB_ENV
+            echo "api_base_url=${{ github.event.inputs.api_base_url }}" >> $GITHUB_ENV
+          fi
+      - name: Run Banner Management Script
+        env:
+          UNAME: ${{ secrets.UNAME }}
+          USECRET: ${{ secrets.USECRET }}
+          API_BASE_URL: ${{ env.api_base_url }}
+          INPUT_OPERATION: ${{ env.operation }}
+          INPUT_TENANT_IDS: ${{ env.tenant_ids }}
+          INPUT_SCHEDULED_DATE: ${{ env.scheduled_date }}
+          INPUT_OUTAGE_TIME: ${{ env.outage_time }}
+        run: python3 ./migration_banner.py
